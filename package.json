@@ -16,11 +16,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sprintsynergyhq/qa-core-flaky.git"
+    "url": "git+https://github.com/sprintsynergyio/qa-core-flaky.git"
   },
-  "homepage": "https://github.com/sprintsynergyhq/qa-core-flaky#readme",
+  "homepage": "https://github.com/sprintsynergyio/qa-core-flaky#readme",
   "bugs": {
-    "url": "https://github.com/sprintsynergyhq/qa-core-flaky/issues"
+    "url": "https://github.com/sprintsynergyio/qa-core-flaky/issues"
   },
   "keywords": [
     "playwright",
