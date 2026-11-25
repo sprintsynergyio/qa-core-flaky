@@ -1,10 +1,59 @@
-# qa-core-flaky
+<h1 align="center">qa-core-flaky</h1>
+
+<p align="center">
+  <strong>A flaky test or a real bug? Start with the evidence.</strong><br/>
+  <strong>Parse • Find causes • Triage • Rerun</strong><br/>
+  <sub>Triage Playwright failures from JSON or JUnit, quote the evidence, suggest a next step, and keep every retry attempt the report contains.</sub>
+</p>
+
+<p align="center">
+  <a href="https://github.com/sprintsynergyio/qa-core-flaky/actions/workflows/ci.yml"><img src="https://github.com/sprintsynergyio/qa-core-flaky/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://www.npmjs.com/package/qa-core-flaky"><img src="https://img.shields.io/npm/v/qa-core-flaky.svg" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/qa-core-flaky"><img src="https://img.shields.io/npm/dm/qa-core-flaky.svg" alt="npm downloads" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license" /></a>
+  <img src="https://img.shields.io/badge/node-%3E%3D22.6-339933?logo=node.js&logoColor=white" alt="Node 22.6 or newer" />
+</p>
+
+<p align="center">
+  <a href="#quick-start">Quick Start</a> · <a href="#features">Features</a> · <a href="#how-it-works">How it works</a> · <a href="#usage">Usage</a> · <a href="#html-report">Report</a> · <a href="#documentation">Docs</a> · <a href="https://www.npmjs.com/package/qa-core-flaky">npm</a>
+</p>
+
+---
 
 qa-core-flaky triages flaky Playwright tests. It separates a likely real bug from an unstable test, names the likely cause, and suggests a fix for an engineer to review. It reads a Playwright JSON report or a JUnit XML report and prints one normalized record per test. It also names a likely cause for each failed or flaky test, with the evidence quoted from the error text. The JSON parser keeps every retry attempt. The JUnit parser keeps one attempt per test, because Playwright's default JUnit report does not list retries separately.
 
-## Status
+<table>
+<tr>
+<td width="33%" valign="top">
 
-Version 0.1.2. The commands are `parse`, `causes`, `triage`, and `rerun`.
+### Evidence, not a hunch
+
+Likely causes are deterministic rules, not a model call. The report quotes the error evidence, gives a confidence level, and separates flaky from likely real bug, broken test, environment issue or needs more runs.
+
+</td>
+<td width="33%" valign="top">
+
+### Reports you can share
+
+JSON, Markdown and a self-contained HTML report with filters, sorting, expandable evidence, a dark theme and a print view. Home usernames and token-like strings are hidden by default in the triage reports.
+
+</td>
+<td width="33%" valign="top">
+
+### A safe next step
+
+`rerun` collects more attempts without hiding the first failure behind retries. `--heal` asks qa-core-heal for a dry run and merges its proposal; it never passes `--apply`, `--yes` or `--no-verify`.
+
+</td>
+</tr>
+</table>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/sprintsynergyio/qa-core-flaky/main/examples/triage.png" alt="qa-core-flaky HTML report: verdict, cause, confidence and attempts per flagged test" width="100%" />
+  <br/><sub>A recorded SauceDemo practice-app run, from <code>fixtures/reports/saucedemo-kit-triage.json</code>. Passed tests are not listed.</sub>
+</p>
+
+---
 
 ## Install
 
@@ -57,6 +106,55 @@ On macOS and Linux: `QA_CORE_HEAL_TIMEOUT_MS=300000 npx qa-core-flaky triage <re
 
 If you press Ctrl+C during `triage --heal`, flaky stops heal and the browsers it started, removes its `qa-core-flaky-heal-*` folder in the temp directory, does not write the triage report, and exits 130. Ctrl+Break on Windows does the same. On Windows PowerShell, `npx` runs through `npx.ps1`, and after Ctrl+C `$LASTEXITCODE` shows 1 instead of 130. Run `node node_modules/qa-core-flaky/dist/cli.js` directly to see 130. The cleanup is the same either way.
 
+---
+
+## Features
+
+- **Two report formats:** Playwright JSON (every retry attempt) and JUnit XML (one attempt per test, because Playwright's default JUnit report does not list retries separately).
+- **Deterministic cause rules:** selectors, timing, test data, environment and unknown, with quoted evidence. See [docs/causes.md](docs/causes.md).
+- **Triage across reports:** one verdict per test id, with duplicate report handling and same-code pass/fail signals. See [docs/verdicts.md](docs/verdicts.md).
+- **Self-contained HTML:** `--html` writes one file, with no network calls or external assets. See [HTML Report](#html-report).
+- **Controlled reruns:** repeat, isolated and in-order modes; retries default to 0. See [docs/rerun.md](docs/rerun.md).
+- **Heal handoff:** a findings file for qa-core-heal, or `--heal` for a re-run-verified dry-run proposal. No patch is applied by flaky.
+- **CI exit codes:** triage exits 2 for entries by default, 0 for none; `--fail-on never` reports without failing; tool errors exit 1.
+
+---
+
+## How it works
+
+```
+  Playwright JSON or JUnit XML report(s)
+                 │
+  1. Parse       one normalized record per test, keeping every attempt the report contains
+  2. Causes      deterministic rules read the error text and quote the evidence
+  3. Triage      records for a test id are combined into a verdict, confidence and suggested next step
+  4. Report      triage.json, triage.md, and optionally triage.html
+                 │
+  Optional       rerun collects new attempts and merges them;
+                 --heal asks qa-core-heal for a dry run and stores the proposal
+```
+
+There is no model call in the verdict engine. The decision rows, in order, are in [docs/verdicts.md](docs/verdicts.md).
+
+## Status
+
+Version 0.1.2. The commands are `parse`, `causes`, `triage`, and `rerun`.
+
+## Model
+
+Each test becomes a record with a stable id, a file path, a project name, a title path, an expected status, an outcome, and every attempt. The outcome is passed, flaky, failed, or skipped. The full field list is in [docs/model.md](docs/model.md).
+
+## Usage
+
+| Command | What it does |
+| --- | --- |
+| `parse <report>` | normalizes records as JSON |
+| `causes <report>` | names likely causes; `--json` returns an array |
+| `triage <report...>` | writes JSON and Markdown, plus HTML with `--html` |
+| `rerun --from <report>` | collects new attempts with Playwright and merges them |
+
+`npx qa-core-flaky --help` lists every option. The details for each command are in [Quick Start](#quick-start) and the docs linked there.
+
 ## HTML Report
 
 `--html` writes `triage.html` in `--out-dir`, beside `triage.json` and `triage.md`. `rerun` accepts the same flag when it writes a triage report.
@@ -73,13 +171,11 @@ Home usernames are hidden, with the same rules as `parse --redact`. That is the 
 
 The screenshots are a SauceDemo run stored in `fixtures/reports/saucedemo-kit-triage.json`. The report lists 6 flaky tests. Tests that passed are not listed.
 
-![Triage report, light](https://raw.githubusercontent.com/sprintsynergyhq/qa-core-flaky/main/examples/triage.png)
+![Triage report, dark](https://raw.githubusercontent.com/sprintsynergyio/qa-core-flaky/main/examples/triage-dark.png)
 
-![Triage report, dark](https://raw.githubusercontent.com/sprintsynergyhq/qa-core-flaky/main/examples/triage-dark.png)
+![Triage report, mobile](https://raw.githubusercontent.com/sprintsynergyio/qa-core-flaky/main/examples/triage-mobile.png)
 
-![Triage report, mobile](https://raw.githubusercontent.com/sprintsynergyhq/qa-core-flaky/main/examples/triage-mobile.png)
-
-![Triage report, print](https://raw.githubusercontent.com/sprintsynergyhq/qa-core-flaky/main/examples/triage-print.png)
+![Triage report, print](https://raw.githubusercontent.com/sprintsynergyio/qa-core-flaky/main/examples/triage-print.png)
 
 `rerun` runs the failing tests again with Playwright and merges the new attempts. `--retries` defaults to 0 so a retry cannot hide the first failure. `--root` is the JUnit project root. The modes and the safety rules are in [docs/rerun.md](docs/rerun.md). Unit tests do not launch a browser.
 
@@ -87,16 +183,55 @@ The screenshots are a SauceDemo run stored in `fixtures/reports/saucedemo-kit-tr
 
 `demo/saucedemo` is a Playwright suite for the public SauceDemo practice app. Some tests fail on purpose from a seed. `npm test` does not run it and does not call that site. The recorded reports and the run notes are in [demo/saucedemo/README.md](demo/saucedemo/README.md).
 
-## Model
+---
 
-Each test becomes a record with a stable id, a file path, a project name, a title path, an expected status, an outcome, and every attempt. The outcome is passed, flaky, failed, or skipped. The full field list is in [docs/model.md](docs/model.md).
+## Configuration
+
+No config file or model API key is required for parsing and triage. Commands take their options on the CLI.
+
+| Option / variable | What it controls |
+| --- | --- |
+| `--format json` / `--format junit` | overrides content-based detection |
+| `--commit`, `--branch`, `--run-id` | metadata copied to normalized records |
+| `--out`, `--out-dir` | the file or folder to write |
+| `--redact`, `--html-no-redact` | path redaction; never share a file made with `--html-no-redact` |
+| `--fail-on findings` / `--fail-on never` | triage exit-code policy |
+| `--test-timeout <ms>` | timeout used by the near-timeout cause rule |
+| `QA_CORE_HEAL_TIMEOUT_MS` | wait for the whole heal step, 180000 by default, up to 600000 |
+
+Rerun flags and the safety bounds for `--times`, `--retries`, `--modes` and `--max-tests` are in [docs/rerun.md](docs/rerun.md).
+
+## Platform notes
+
+- **Node 22.6 or later.** Parsing and triage do not run a browser. CI runs on Ubuntu with Node 22, plus the HTML report tests in Chromium, Firefox and WebKit.
+- **Rerun:** install `@playwright/test` 1.60.0 or later and a Playwright browser in the project under test.
+- **Heal:** install `qa-core-heal` 0.4.0 or later in the project for a re-run-verified proposal. Version 0.3.x is an older dry-run mode, not re-run verified.
+- **Windows, macOS and Linux:** flaky starts the project's installed heal script with Node. Only macOS and Linux have the `npx --no-install` fallback; Windows reports `unavailable` if no local install is found.
+- **Windows:** heal runs slower there; raise `QA_CORE_HEAL_TIMEOUT_MS` if you see `timeout` refusals. After Ctrl+C in Windows PowerShell, `$LASTEXITCODE` shows 1 instead of 130. Both are covered in [Quick Start](#quick-start).
+
+---
+
+## Documentation
+
+| Doc | For |
+|---|---|
+| [docs/model.md](docs/model.md) | normalized test records |
+| [docs/causes.md](docs/causes.md) | cause rules and confidence |
+| [docs/verdicts.md](docs/verdicts.md) | the ordered verdict decision table |
+| [docs/report-schema.md](docs/report-schema.md) | triage JSON shape |
+| [docs/rerun.md](docs/rerun.md) | rerun modes, flags and safety bounds |
+| [docs/heal-contract.md](docs/heal-contract.md) | heal handoff, gates and redaction |
+| [demo/saucedemo/README.md](demo/saucedemo/README.md) | the demo and recorded reports |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | local development |
+| [CHANGELOG.md](CHANGELOG.md) | release notes |
+| [SECURITY.md](SECURITY.md) | security reports |
 
 ## Contributors
 
 From a local clone, install dependencies, build, and run the commands against the committed fixtures:
 
 ```sh
-git clone https://github.com/sprintsynergyhq/qa-core-flaky.git
+git clone https://github.com/sprintsynergyio/qa-core-flaky.git
 cd qa-core-flaky
 npm ci
 npm run build
@@ -114,8 +249,17 @@ node dist/cli.js triage fixtures/reports/pw-1.60.0-outcomes.json --out-dir /tmp/
 
 Tests and CI use the committed report. They do not install browsers and they do not call the network. Regenerating the fixture needs the Playwright browser installed on the machine that runs the script.
 
+## Contributing
+
+Found a bug or have an idea? Open an issue. We review pull requests case by case.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
 
-Built by [SprintSynergy](https://sprintsynergy.com) and maintained by [Muhammad Usman](https://linkedin.com/in/sdet-muhammadusman).
+---
+
+<p align="center">
+  <strong>Built by <a href="https://sprintsynergy.com">SprintSynergy</a></strong><br/>
+  <sub>SprintSynergy is an AI-based QA automation company: AI testing agents plus our QA team.</sub>
+</p>
